@@ -2,13 +2,15 @@ import express from 'express';
 import path from 'path';
 import passport from 'passport';
 import dotenv from 'dotenv';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 import { fileURLToPath } from 'url';
 import expressSession from 'express-session';
 import { PrismaSessionStore } from '@quixo3/prisma-session-store';
-import initializePassport from '../lib/passport';
+import initializePassport from '../lib/passport.js';
 
 import authRoutes from '../routes/authRouter.js'
+import postRoutes from '../routes/postRoutes.js'
+import commentRoutes from '../routes/commentRouter.js'
 
 dotenv.config();
 
@@ -52,6 +54,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRoutes);
 
 
 const PORT = process.env.PORT || 3000;
