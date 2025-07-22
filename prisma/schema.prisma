@@ -27,6 +27,7 @@ model User {
 model Post {
   id        String   @id @default(uuid())
   title     String
+  content   String? // HTML from TinyMCE (optional if using PostPage)
   published Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -35,9 +36,42 @@ model Post {
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
 
+  thumbnail   PostImage? @relation("ThumbnailImage", fields: [thumbnailId], references: [id])
+  thumbnailId String?    @unique
+
+  images   PostImage[] @relation("PostImages")
+  postPage PostPage[]
+
   categories Category[]
   comments   Comment[]
   Like       Like[]
+}
+
+model PostPage {
+  id      String @id @default(uuid())
+  pageNum Int
+  content String
+
+  post   Post   @relation(fields: [postId], references: [id])
+  postId String
+
+  @@unique([postId, pageNum])
+}
+
+model PostImage {
+  id        String   @id @default(uuid())
+  url       String
+  caption   String?
+  altText   String?
+  createdAt DateTime @default(now())
+
+  post   Post   @relation("PostImages", fields: [postId], references: [id])
+  postId String
+
+  // Back-reference for thumbnail relation
+  thumbnailFor Post? @relation("ThumbnailImage")
+
+  isInGallery Boolean @default(true)
 }
 
 model Like {
