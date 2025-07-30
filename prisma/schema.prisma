@@ -32,6 +32,7 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   likes     Int      @default(0)
+  favorite  Boolean  @default(false)
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
@@ -42,25 +43,29 @@ model Post {
   images   PostImage[] @relation("PostImages")
   postPage PostPage[]
 
-  categories Category[]
-  comments   Comment[]
-  Like       Like[]
+  tags     Tag[]     @relation("PostTags")
+  comments Comment[]
+  Like     Like[]
 }
 
 model PostPage {
-  id      String @id @default(uuid())
-  pageNum Int
-  content String
+  id       String  @id @default(uuid())
+  pageNum  Int
+  content  String?
+  layout   String?
+  subtitle String?
+  heading  String?
 
-  post   Post   @relation(fields: [postId], references: [id])
-  postId String
+  post      Post        @relation(fields: [postId], references: [id])
+  postId    String
+  PageImage PageImage[]
 
   @@unique([postId, pageNum])
 }
 
 model PostImage {
   id        String   @id @default(uuid())
-  url       String
+  url       String?
   caption   String?
   altText   String?
   createdAt DateTime @default(now())
@@ -71,7 +76,18 @@ model PostImage {
   // Back-reference for thumbnail relation
   thumbnailFor Post? @relation("ThumbnailImage")
 
-  isInGallery Boolean @default(true)
+  isInGallery Boolean     @default(true)
+  PageImage   PageImage[]
+}
+
+model PageImage {
+  id      String    @id @default(uuid())
+  page    PostPage  @relation(fields: [pageId], references: [id])
+  pageId  String
+  image   PostImage @relation(fields: [imageId], references: [id])
+  imageId String
+  order   Int?
+  caption String?
 }
 
 model Like {
@@ -94,10 +110,10 @@ model Comment {
   postId    String
 }
 
-model Category {
+model Tag {
   id    String @id @default(uuid())
   name  String
-  posts Post[]
+  posts Post[] @relation("PostTags")
 }
 
 enum Role {
