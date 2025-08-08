@@ -15,7 +15,7 @@ datasource db {
 
 model User {
   id           String    @id @default(uuid())
-  username     String
+  username     String    @unique
   password     String
   refreshToken String? // optional token for long-lived sessions
   role         Role      @default(USER)
@@ -32,7 +32,6 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   likes     Int      @default(0)
-  favorite  Boolean  @default(false)
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
@@ -112,7 +111,7 @@ model Comment {
 
 model Tag {
   id    String @id @default(uuid())
-  name  String
+  name  String @unique
   posts Post[] @relation("PostTags")
 }
 
