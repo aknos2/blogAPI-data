@@ -1,3 +1,5 @@
+import prisma from '../lib/prisma.js';
+
 export const isCommentOwnerOrAdmin = async (req, res, next) => {
   const { id } = req.params;
   const comment = await prisma.comment.findUnique({ where: { id } });

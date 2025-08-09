@@ -1,35 +1,49 @@
 import prisma from '../lib/prisma.js';
 
-// Get all posts with optional pagination & sorting
-const displayAllPosts = async ({ page = 1, pageSize = 10, sortBy = 'createdAt', order = 'desc' }) => {
-  const skip = (page - 1) * pageSize;
-  const take = pageSize;
-
-  return prisma.post.findMany({
-    skip,
-    take,
-    orderBy: {
-      [sortBy]: order,
+const postWithAllRelations = {
+  author: {
+    select: { id: true, username: true },
+  },
+  comments: {
+    select: { id: true, createdAt: true, userId: true, postId: true },
+  },
+  tags: true,
+  thumbnail: true,
+  Like: {
+    select: {
+      userId: true,
     },
+  },
+  postPage: {
+    orderBy: { pageNum: 'asc' },
     include: {
-      author: {
-        select: { id: true, username: true },
+      PageImage: {
+        include: {
+          image: true,
+        },
       },
-      comments: {
-        select: { id: true, createdAt: true, userId: true, postId: true },
-      },
-      categories: true,
     },
+  },
+};
+
+const displayAllPosts = async (includeUnpublished = false) => {
+  return prisma.post.findMany({
+    orderBy: { createdAt: 'desc' },
+    where: includeUnpublished ? {} : { published: true },
+    include: postWithAllRelations,
   });
 };
 
-const showUnpublishedPosts = async () => {
-  return prisma.post.findMany({
-    where: { published: false },
-    include: {
-      author: true,
-      comments: true,
-    },
+const togglePostPublication = async (postId) => {
+  const post = await prisma.post.findUnique({ 
+    where: { id: postId }
+  });
+
+  if (!post) throw new Error("Post not found");
+
+  return prisma.post.update({
+    where: { id: postId },
+    data: { published: !post.published }
   });
 };
 
@@ -40,19 +54,17 @@ const deletePost = async (id) => {
   return prisma.post.delete({ where: { id } });
 };
 
-const findPostsByCategory = async (categoryName) => {
+const findPostsByCategory = async (tagName) => {
   return prisma.post.findMany({
     where: {
-      categories: {
+      tags: {
         some: {
-          name: categoryName,
+          name: tagName,
+          mode: "insensitive" // Case-insensitive search
         },
       },
     },
-    include: {
-      author: true,
-      comments: true,
-    },
+    include: postWithAllRelations,
   });
 };
 
@@ -63,19 +75,67 @@ const increasePostViewCount = async (postId) => {
   });
 };
 
-const editPost = async (postId, { title, content, categoryId, published }) => {
-  return prisma.post.update({
-    where: { id: postId },
+const editPostPage = async (pageId, { subtitle, heading, content }) => {
+  // First verify the page exists
+  const existingPage = await prisma.postPage.findUnique({
+    where: { id: pageId }
+  });
+  
+  if (!existingPage) {
+    throw new Error('Post page not found');
+  }
+
+  return prisma.postPage.update({
+    where: { id: pageId },
     data: {
-      title, 
+      subtitle,
       content, 
-      categoryId, 
-      published
+      heading
     }
   });
 }
 
+const editPostMeta = async (postId, { title, createdAt, tags }) => {
+  // First verify the page exists
+  const existingPost = await prisma.post.findUnique({
+    where: { id: postId }
+  });
+  
+  if (!existingPost) {
+    throw new Error('Post not found');
+  }
+
+  // Process tags: normalize to lowercase and remove duplicates
+  const processedTags = tags ? 
+    [...new Set(tags.map(tag => tag.toLowerCase().trim()).filter(Boolean))] : 
+    undefined;
+
+  return prisma.post.update({
+    where: { id: postId },
+    data: {
+      ...(title && {title}),
+      ...(createdAt && {createdAt: new Date(createdAt)}),
+      ...(processedTags && {
+        tags: {
+          set: [],
+          connectOrCreate: processedTags.map((tagName) => ({
+            where: { name: tagName },
+            create: { name: tagName }
+          }))
+        }
+      })
+    },
+    include: { tags: true } //return updated tags
+  });
+}
+
 const toggleLike = async (userId, postId) => {
+  // Verify post exists
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) {
+    throw new Error('Post not found');
+  }
+  
   const existingLike = await prisma.like.findUnique({
     where: {
       userId_postId: { userId, postId },
@@ -106,14 +166,14 @@ const getPostLikeCount = async (postId) => {
   });
 };
 
-
 export {
   displayAllPosts,
-  showUnpublishedPosts,
   deletePost,
   findPostsByCategory,
   increasePostViewCount,
-  editPost,
+  editPostPage,
   getPostLikeCount,
-  toggleLike
+  toggleLike,
+  editPostMeta,
+  togglePostPublication
 };

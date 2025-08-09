@@ -1,31 +1,28 @@
 import asyncHandler from 'express-async-handler';
+import prisma from '../lib/prisma.js';
 import {
   displayAllPosts,
-  showUnpublishedPosts,
   deletePost,
   findPostsByCategory,
-  editPost,
   increasePostViewCount,
   toggleLike,
-  getPostLikeCount
+  getPostLikeCount,
+  editPostPage,
+  editPostMeta,
+  togglePostPublication,
 } from '../services/postServices.js';
 
 export const getAllPosts = asyncHandler(async (req, res) => {
-  const { page, pageSize, sortBy, order } = req.query;
-
-  const posts = await displayAllPosts({
-    page: parseInt(page) || 1,
-    pageSize: parseInt(pageSize) || 10,
-    sortBy: sortBy || 'createdAt',
-    order: order || 'desc',
-  });
-
+  // If admin is logged in, show both published & unpublished
+  const includeUnpublished = req.user?.role === 'ADMIN';
+  const posts = await displayAllPosts(includeUnpublished);
   res.json(posts);
 });
 
-export const getUnpublishedPosts = asyncHandler(async (req, res) => {
-  const posts = await showUnpublishedPosts();
-  res.json(posts);
+export const handleTogglePublication = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const updatedPost = await togglePostPublication(postId);
+  res.json(updatedPost);
 });
 
 export const removePost = asyncHandler(async (req, res) => {
@@ -35,8 +32,8 @@ export const removePost = asyncHandler(async (req, res) => {
 });
 
 export const getPostsByCategory = asyncHandler(async (req, res) => {
-  const { category } = req.params;
-  const posts = await findPostsByCategory(category);
+  const { tag } = req.params;
+  const posts = await findPostsByCategory(tag);
   res.json(posts);
 });
 
@@ -58,12 +55,22 @@ export const createPost = asyncHandler(async (req, res) => {
   res.status(201).json(post);
 });
 
-export const updatePost = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { title, content, categoryId, published } = req.body;
-  const updated = await editPost(id, { title, content, categoryId, published });
-  res.json({ message: 'Post updated', updated})
+export const updatePostPage = asyncHandler(async (req, res) => {
+  const { pageId } = req.params;
+  const { heading, subtitle, content } = req.body;
+  
+  const updated = await editPostPage(pageId, { heading, subtitle, content });
+  res.json({ message: 'Post page updated', updated });
 });
+
+export const updatePostMeta = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { title, createdAt, tags } = req.body;
+  
+  const updated = await editPostMeta(postId, { title, createdAt, tags });
+  res.json({ message: 'Post updated', updated });
+});
+
 
 export const incrementPostViews = asyncHandler(async (req, res) => {
   const { id } = req.params;

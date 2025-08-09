@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import {
   getAllPosts,
-  getUnpublishedPosts,
   removePost,
   getPostsByCategory,
   createPost,
-  updatePost,
-  toggleLikeHandler
+  toggleLikeHandler,
+  updatePostPage,
+  updatePostMeta,
+  handleTogglePublication
 } from '../controller/postController.js';
 import { isAdmin } from '../middleware/isAdmin.js';
 import passport from 'passport';
@@ -14,7 +15,11 @@ import passport from 'passport';
 const postRouter = Router();
 
 // Public
-postRouter.get('/', getAllPosts);
+postRouter.get(
+  '/',
+  passport.authenticate('jwt', { session: false, failWithError: false }),
+  getAllPosts
+);
 postRouter.get('/category/:category', getPostsByCategory);
 postRouter.post(
   '/:id/like',
@@ -23,9 +28,10 @@ postRouter.post(
 );
 
 // Protected (admin only)
-postRouter.get('/unpublished', passport.authenticate('jwt', { session: false }), isAdmin, getUnpublishedPosts);
 postRouter.post('/', passport.authenticate('jwt', { session: false }), isAdmin, createPost);
-postRouter.put('/:id', passport.authenticate('jwt', { session: false }), isAdmin, updatePost);
+postRouter.put('/:postId/pages/:pageId', passport.authenticate('jwt', { session: false }), isAdmin, updatePostPage);
+postRouter.put('/:postId/meta', passport.authenticate('jwt', { session: false }), isAdmin, updatePostMeta);
+postRouter.put('/:postId/publication', passport.authenticate('jwt', {session: false}), isAdmin, handleTogglePublication);
 postRouter.delete('/:id', passport.authenticate('jwt', { session: false }), isAdmin, removePost);
 
 export default postRouter;

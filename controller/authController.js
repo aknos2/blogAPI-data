@@ -29,16 +29,18 @@ export const loginHandler = asyncHandler(async(req, res, next) => {
 
     return res.json({
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username, 
+        role: user.role
       },
     });
   })(req, res, next);
 });
 
 export const refreshTokenHandler = asyncHandler(async (req, res) => {
-  const token = req.cookies.refreshToken;
+  const token = req.cookies.refreshToken || req.body.refreshToken;
 
   if (!token) return res.sendStatus(401);
 
@@ -58,19 +60,27 @@ export const refreshTokenHandler = asyncHandler(async (req, res) => {
 });
 
 export const logoutHandler = asyncHandler(async (req, res) => {
-  const token = req.cookies.refreshToken;
+  // Check if cookies exist and get refresh token
+  const token = req.cookies?.refreshToken;
 
   if (token) {
-    const payload = jwt.verify(token, process.env.REFRESH_SECRET);
+    try {
+      const payload = jwt.verify(token, process.env.REFRESH_SECRET);
 
-    await prisma.user.update({
-      where: { id: payload.userId },
-      data: { refreshToken: null },
-    });
+      await prisma.user.update({
+        where: { id: payload.userId },
+        data: { refreshToken: null },
+      });
 
-    res.clearCookie('refreshToken');
+      res.clearCookie('refreshToken');
+    } catch (error) {
+      console.error('Error clearing refresh token:', error);
+      // Still clear the cookie even if database update fails
+      res.clearCookie('refreshToken');
+    }
   }
 
+  // Always send success response, even if no token was found
   res.sendStatus(204);
 });
 
