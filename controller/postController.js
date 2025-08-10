@@ -10,6 +10,8 @@ import {
   editPostPage,
   editPostMeta,
   togglePostPublication,
+  updatePageImage,
+  updatePostThumbnail,
 } from '../services/postServices.js';
 
 export const getAllPosts = asyncHandler(async (req, res) => {
@@ -71,6 +73,17 @@ export const updatePostMeta = asyncHandler(async (req, res) => {
   res.json({ message: 'Post updated', updated });
 });
 
+export const handleUpdatePostThumbnail = asyncHandler(async (req, res) => {
+  const imageUrl = req.file.path; 
+  const updatedPost = await updatePostThumbnail(req.params.postId, imageUrl);
+  res.json(updatedPost);
+});
+
+export const handleUpdatePageImage = asyncHandler(async (req, res) => {
+  const imageUrl = req.file.path; 
+  const updatedPageImage = await updatePageImage(req.params.pageImageId, imageUrl);
+  res.json(updatedPageImage);
+});
 
 export const incrementPostViews = asyncHandler(async (req, res) => {
   const { id } = req.params;

@@ -129,6 +129,65 @@ const editPostMeta = async (postId, { title, createdAt, tags }) => {
   });
 }
 
+const updatePostThumbnail = async (postId, imageUrl) => {
+  const existingPost = await prisma.post.findUnique({ where: { id: postId } });
+  if (!existingPost) throw new Error("Post not found");
+
+  const image = await prisma.postImage.create({
+    data: { url: imageUrl, 
+            postId 
+          }
+  });
+
+  return prisma.post.update({
+    where: { id: postId },
+    data: {
+    thumbnail: {
+        upsert: {
+          create: { 
+            url: imageUrl, 
+            postId 
+          },
+          update: { 
+            url: imageUrl 
+          }
+        }
+      }
+    },
+    include: postWithAllRelations
+  });
+};
+
+const updatePageImage = async (pageImageId, imageUrl) => {
+  const existingPageImage = await prisma.pageImage.findUnique({
+    where: { id: pageImageId },
+    include: { page: true }
+  });
+  if (!existingPageImage) throw new Error("PageImage not found");
+
+  return prisma.pageImage.update({
+    where: { id: pageImageId },
+    data: { 
+      image: {
+        upsert: {
+          create: {
+            url: imageUrl,
+            postId: existingPageImage.page.postId
+          },
+          update: {
+            url: imageUrl
+          }
+        }
+      }
+    },
+    include: {
+      image: true,
+      page: true
+    }
+  });
+};
+
+
 const toggleLike = async (userId, postId) => {
   // Verify post exists
   const post = await prisma.post.findUnique({ where: { id: postId } });
@@ -175,5 +234,7 @@ export {
   getPostLikeCount,
   toggleLike,
   editPostMeta,
-  togglePostPublication
+  togglePostPublication,
+  updatePageImage,
+  updatePostThumbnail
 };
