@@ -15,8 +15,7 @@ export const thumbnailStorage = new CloudinaryStorage({
     folder: 'doggo-blog-thumbnails',
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
     transformation: [
-      { quality: 'auto', fetch_format: 'auto' },
-      { width: 1200, height: 1200, crop: 'fill', gravity: 'auto' }
+      { quality: 'auto', fetch_format: 'auto' }
     ]
   }
 });

@@ -20,7 +20,8 @@ export const createComment = asyncHandler(async (req, res) => {
         select: {
           id: true,
           username: true,
-          role: true
+          role: true,
+          avatar: true
         }
       }
     }
@@ -53,7 +54,8 @@ export const displayCommentsFromPost = asyncHandler(async (req, res) => {
       select: {
         id: true,
         username: true,
-        role: true
+        role: true,
+        avatar: true
       }
     }
   }, //to show commenter info

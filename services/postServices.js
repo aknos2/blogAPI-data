@@ -26,6 +26,94 @@ const postWithAllRelations = {
   },
 };
 
+const createPost = async ({
+  title,
+  authorId,
+  published = false,
+  content = null, // optional top-level post content
+  tags = [],
+  thumbnailUrl = null,
+  pages = [] // [{ pageNum, subtitle, heading, content, layout, images: [{ url, caption, altText, order }] }]
+}) => {
+  const processedTags = [...new Set(tags.map(tag => tag.toLowerCase().trim()).filter(Boolean))];
+
+  // STEP 1: Create post without pages/thumbnail
+  const post = await prisma.post.create({
+    data: {
+      title,
+      content,
+      published,
+      author: { connect: { id: authorId } },
+      ...(processedTags.length && {
+        tags: {
+          connectOrCreate: processedTags.map(tagName => ({
+            where: { name: tagName },
+            create: { name: tagName }
+          }))
+        }
+      })
+    }
+  });
+
+  // STEP 2: Add post pages if provided
+  if (pages.length) {
+    await prisma.post.update({
+      where: { id: post.id },
+      data: {
+        postPage: {
+          create: pages.map(page => ({
+            pageNum: page.pageNum,
+            subtitle: page.subtitle || null,
+            heading: page.heading || null,
+            content: page.content || null,
+            layout: page.layout || null,
+            PageImage: {
+              create: (page.images || []).map(img => ({
+                order: img.order || null,
+                caption: img.caption || null,
+                image: {
+                  create: {
+                    postId: post.id, // ✅ Now available
+                    url: img.url,
+                    caption: img.caption || null,
+                    altText: img.altText || null,
+                    isInGallery: true
+                  }
+                }
+              }))
+            }
+          }))
+        }
+      }
+    });
+  }
+
+  // STEP 3: Add thumbnail if provided
+  if (thumbnailUrl) {
+    const thumbnailImage = await prisma.postImage.create({
+      data: {
+        url: thumbnailUrl,
+        postId: post.id,
+        isInGallery: false
+      }
+    });
+
+    await prisma.post.update({
+      where: { id: post.id },
+      data: {
+        thumbnailId: thumbnailImage.id
+      }
+    });
+  }
+
+  // STEP 4: Return post with all relations
+  return prisma.post.findUnique({
+    where: { id: post.id },
+    include: postWithAllRelations
+  });
+};
+
+
 const displayAllPosts = async (includeUnpublished = false) => {
   return prisma.post.findMany({
     orderBy: { createdAt: 'desc' },
@@ -236,5 +324,6 @@ export {
   editPostMeta,
   togglePostPublication,
   updatePageImage,
-  updatePostThumbnail
+  updatePostThumbnail,
+  createPost
 };

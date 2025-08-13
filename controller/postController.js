@@ -1,5 +1,4 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../lib/prisma.js';
 import {
   displayAllPosts,
   deletePost,
@@ -12,6 +11,7 @@ import {
   togglePostPublication,
   updatePageImage,
   updatePostThumbnail,
+  createPost,
 } from '../services/postServices.js';
 
 export const getAllPosts = asyncHandler(async (req, res) => {
@@ -19,6 +19,32 @@ export const getAllPosts = asyncHandler(async (req, res) => {
   const includeUnpublished = req.user?.role === 'ADMIN';
   const posts = await displayAllPosts(includeUnpublished);
   res.json(posts);
+});
+
+export const handleCreatePost = asyncHandler(async (req, res) => {
+  // Destructure the fields directly from the request body
+  const {
+    title,
+    authorId,
+    published,
+    content,
+    tags,
+    thumbnailUrl,
+    pages
+  } = req.body;
+
+  // Call createPost with a flat object
+  const createdContent = await createPost({
+    title,
+    authorId,
+    published,
+    content,
+    tags,
+    thumbnailUrl,
+    pages
+  });
+
+  res.status(201).json(createdContent);
 });
 
 export const handleTogglePublication = asyncHandler(async (req, res) => {
@@ -37,24 +63,6 @@ export const getPostsByCategory = asyncHandler(async (req, res) => {
   const { tag } = req.params;
   const posts = await findPostsByCategory(tag);
   res.json(posts);
-});
-
-export const createPost = asyncHandler(async (req, res) => {
-  const { title, content, categoryId } = req.body;
-
-  const post = await prisma.post.create({
-    data: {
-      title,
-      content,
-      published: false,
-      authorId: req.user.id,
-      category: {
-        connect: { id: categoryId },
-      },
-    },
-  });
-
-  res.status(201).json(post);
 });
 
 export const updatePostPage = asyncHandler(async (req, res) => {

@@ -27,6 +27,11 @@ export const validateUserRegistration = [
       }
       return true;
     }),
+
+    // Add avatar validation
+  body('avatar')
+    .optional()
+    .isString().withMessage('Avatar must be a string'),
 ];
 
 export const signupHandler = [
