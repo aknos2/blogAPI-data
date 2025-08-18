@@ -2,47 +2,30 @@ import prisma from "../lib/prisma.js";
 import bcrypt from 'bcryptjs';
 
 async function main() {
+  const DEFAULT_AVATAR = '/assets/corgi/profile/white-cat-icon.png';
 
-//    const plainPassword = '123';
-//    const hashedPassword = await bcrypt.hash(plainPassword, 10)
-//    await prisma.user.upsert({
-//      where: { username: '' },
-//      update: {},
-//      create: {
-//        username: '',
-//        password: hashedPassword,
-//        role: 'USER'
-//      }
-//    });
+  const plainPassword = 'tomiyoshi3218';
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-const DEFAULT_AVATAR = "/assets/corgi/profile/default.webp";
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {}, // keep empty if you don't want to change existing admin
+    create: {
+      username: 'admin',
+      password: hashedPassword,
+      role: 'ADMIN',
+      avatar: DEFAULT_AVATAR
+    }
+  });
 
-async function migrateAvatars() {
-  try {
-    const result = await prisma.user.updateMany({
-      where: {
-        avatar: null
-      },
-      data: {
-        avatar: DEFAULT_AVATAR
-      }
-    });
-
-    console.log(`Updated ${result.count} users with default avatars`);
-  } catch (error) {
-    console.error('Migration failed:', error);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-migrateAvatars();
+  console.log('✅ Admin user seeded successfully');
 }
 
 main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error('❌ Seeding failed:', e);
     process.exit(1);
   })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

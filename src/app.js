@@ -9,6 +9,7 @@ import { PrismaSessionStore } from '@quixo3/prisma-session-store';
 import initializePassport from '../lib/passport.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import compression from 'compression';
 
 import authRoutes from '../routes/authRouter.js'
 import postRoutes from '../routes/postRoutes.js'
@@ -24,22 +25,31 @@ const app = express();
 initializePassport();
 app.set('views', path.join(__dirname, "views"));
 
+// CORS configuration for production and development
+const corsOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL || 'https://your-frontend-domain.vercel.app']
+  : ['http://localhost:4173', 'http://localhost:5173'];
+
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: corsOrigins,
   credentials: true, 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.urlencoded({extended: true}));
 app.use(express.json());
 app.use(cookieParser());
+app.use(compression());
 
 // PostgreSQL + Prisma
 app.use(
   expressSession({
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000 // ms
+      maxAge: 7 * 24 * 60 * 60 * 1000, // ms
+      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     },
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -57,9 +67,15 @@ app.use(
 
 // Passport
 app.use(passport.initialize());
+app.use(passport.session());
 app.use((req, res, next) => {
   res.locals.user = req.user;
   next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Routes
@@ -68,19 +84,29 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/user', userRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Listening on port ${PORT}`);
-})
-
 // Global error handler
 app.use((err, req, res, next) => {
-  console.log(err);
+  console.error(err);
 
   if (res.headersSent) {
-    return next(err); // delegate to default Express error handler
+    return next(err);
   }
 
   const status = Number(err.statusCode) || 500;
-  res.status(status).send(err.message || 'Something went wrong');
+  res.status(status).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Something went wrong' 
+      : err.message
+  });
 });
+
+const PORT = process.env.PORT || 3000;
+
+// For Vercel, we don't need to call app.listen()
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Listening on port ${PORT}`);
+  });
+}
+
+export default app;

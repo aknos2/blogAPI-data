@@ -18,11 +18,7 @@ import { uploadPageImage, uploadThumbnail } from '../utils/cloudinaryConfig.js';
 const postRouter = Router();
 
 // Public
-postRouter.get(
-  '/',
-  passport.authenticate('jwt', { session: false, failWithError: false }),
-  getAllPosts
-);
+postRouter.get('/', getAllPosts);
 postRouter.get('/category/:category', getPostsByCategory);
 postRouter.post(
   '/:id/like',
