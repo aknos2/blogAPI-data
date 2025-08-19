@@ -1,16 +1,16 @@
 import { Router } from 'express';
-import passport from 'passport';
 import { createComment, deleteComment, displayCommentsFromPost } from '../controller/commentController.js';
 import { isCommentOwnerOrAdmin } from '../middleware/isCommentOwnerOrAdmin.js';
+import { authenticateJWT } from '../middleware/auth.js';
 
 const commentRouter = Router();
 
 commentRouter.get('/post/:postId', displayCommentsFromPost);
 
-commentRouter.post('/', passport.authenticate('jwt', { session: false }), createComment);
+commentRouter.post('/', authenticateJWT, createComment);
 
 commentRouter.delete('/:id',
-  passport.authenticate('jwt', { session: false }),
+  authenticateJWT,
   isCommentOwnerOrAdmin,
   deleteComment
 );

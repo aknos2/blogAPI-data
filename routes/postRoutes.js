@@ -12,38 +12,35 @@ import {
   handleCreatePost
 } from '../controller/postController.js';
 import { isAdmin } from '../middleware/isAdmin.js';
-import passport from 'passport';
 import { uploadPageImage, uploadThumbnail } from '../utils/cloudinaryConfig.js';
+import { authenticateJWT, optionalAuth } from '../middleware/auth.js'; // NEW
 
 const postRouter = Router();
 
-// Public
-postRouter.get('/', getAllPosts);
+// Public routes - but with optional auth for admin posts
+postRouter.get('/', optionalAuth, getAllPosts); // Now can show unpublished to admins
 postRouter.get('/category/:category', getPostsByCategory);
-postRouter.post(
-  '/:id/like',
-  passport.authenticate('jwt', { session: false }),
-  toggleLikeHandler
-);
 
-// Protected (admin only)
-postRouter.post('/', passport.authenticate('jwt', { session: false }), isAdmin, handleCreatePost);
-postRouter.put('/:postId/pages/:pageId', passport.authenticate('jwt', { session: false }), isAdmin, updatePostPage);
-postRouter.put('/:postId/meta', passport.authenticate('jwt', { session: false }), isAdmin, updatePostMeta);
-postRouter.put('/:postId/thumbnail', passport.authenticate('jwt', { session: false }), isAdmin, uploadThumbnail.single('file'), handleUpdatePostThumbnail);
-postRouter.put('/page-images/:pageImageId', passport.authenticate('jwt', { session: false }), isAdmin, uploadPageImage.single('file'), handleUpdatePageImage);
-postRouter.put('/:postId/publication', passport.authenticate('jwt', {session: false}), isAdmin, handleTogglePublication);
-postRouter.delete('/:id', passport.authenticate('jwt', { session: false }), isAdmin, removePost);
+// Authentication required
+postRouter.post('/:id/like', authenticateJWT, toggleLikeHandler);
 
+// Protected (admin only) - just replace passport.authenticate with authenticateJWT
+postRouter.post('/', authenticateJWT, isAdmin, handleCreatePost);
+postRouter.put('/:postId/pages/:pageId', authenticateJWT, isAdmin, updatePostPage);
+postRouter.put('/:postId/meta', authenticateJWT, isAdmin, updatePostMeta);
+postRouter.put('/:postId/thumbnail', authenticateJWT, isAdmin, uploadThumbnail.single('file'), handleUpdatePostThumbnail);
+postRouter.put('/page-images/:pageImageId', authenticateJWT, isAdmin, uploadPageImage.single('file'), handleUpdatePageImage);
+postRouter.put('/:postId/publication', authenticateJWT, isAdmin, handleTogglePublication);
+postRouter.delete('/:id', authenticateJWT, isAdmin, removePost);
 
-// Temporary upload endpoints for CreatePostForm
+// Temp upload endpoints - same change
 postRouter.post('/temp-upload/thumbnail', 
-  passport.authenticate('jwt', { session: false }), 
+  authenticateJWT, 
   isAdmin, 
   uploadThumbnail.single('file'), 
   async (req, res) => {
     try {
-      const imageUrl = req.file.path; // Cloudinary URL
+      const imageUrl = req.file.path;
       res.json({ 
         success: true, 
         url: imageUrl,
@@ -60,12 +57,12 @@ postRouter.post('/temp-upload/thumbnail',
 );
 
 postRouter.post('/temp-upload/page-image', 
-  passport.authenticate('jwt', { session: false }), 
+  authenticateJWT, 
   isAdmin, 
   uploadPageImage.single('file'), 
   async (req, res) => {
     try {
-      const imageUrl = req.file.path; // Cloudinary URL
+      const imageUrl = req.file.path;
       res.json({ 
         success: true, 
         url: imageUrl,

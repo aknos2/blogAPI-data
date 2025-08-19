@@ -2,10 +2,7 @@ import express from 'express';
 import path from 'path';
 import passport from 'passport';
 import dotenv from 'dotenv';
-import prisma from '../lib/prisma.js';
 import { fileURLToPath } from 'url';
-import expressSession from 'express-session';
-import { PrismaSessionStore } from '@quixo3/prisma-session-store';
 import initializePassport from '../lib/passport.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -23,11 +20,10 @@ export const __dirname = path.dirname(__filename);
 
 const app = express();
 initializePassport();
-app.set('views', path.join(__dirname, "views"));
 
 // CORS configuration for production and development
 const corsOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL || 'https://your-frontend-domain.vercel.app']
+  ? [process.env.FRONTEND_URL || 'https://doggo-blog.vercel.app']
   : ['http://localhost:4173', 'http://localhost:5173'];
 
 // Middleware
@@ -40,38 +36,12 @@ app.use(cors({
 
 app.use(express.urlencoded({extended: true}));
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser()); // Keep for optional refresh token cookies
 app.use(compression());
 
-// PostgreSQL + Prisma
-app.use(
-  expressSession({
-    cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // ms
-      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    },
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: new PrismaSessionStore(
-      prisma, 
-      {
-        checkPeriod: 2 * 60 * 1000,  //ms
-        dbRecordIdIsSessionId: true,
-        dbRecordIdFunction: undefined,
-      }
-    )
-  })
-)
-
-// Passport
+// Initialize Passport (but no sessions)
 app.use(passport.initialize());
-app.use(passport.session());
-app.use((req, res, next) => {
-  res.locals.user = req.user;
-  next();
-});
+// REMOVED: app.use(passport.session()); - Not needed for JWT
 
 // Health check endpoint
 app.get('/health', (req, res) => {

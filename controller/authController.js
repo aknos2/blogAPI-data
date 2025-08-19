@@ -10,8 +10,18 @@ export const loginHandler = asyncHandler(async(req, res, next) => {
       return res.status(401).json({ success: false, message: info?.message || 'Invalid credentials' });
     }
 
-    const accessToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn:`${process.env.REFRESH_TOKEN_EXPIRE_TIME}`});
-    const refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_SECRET, { expiresIn: `${process.env.TOKEN_EXPIRE_TIME}`});
+    // Fixed: Correct token expiration times and fallback values
+    const accessToken = jwt.sign(
+      { userId: user.id }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: process.env.TOKEN_EXPIRE_TIME }
+    );
+    
+    const refreshToken = jwt.sign(
+      { userId: user.id }, 
+      process.env.REFRESH_SECRET, 
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_TIME }
+    );
 
     // Save the refresh token in DB
     await prisma.user.update({
@@ -52,10 +62,12 @@ export const refreshTokenHandler = asyncHandler(async (req, res) => {
     return res.sendStatus(403);
   }
 
-  // Issue a new access token
-  const newAccessToken = jwt.sign({ userId: user.id}, process.env.JWT_SECRET, {
-    expiresIn:`${process.env.REFRESH_TOKEN_EXPIRE_TIME}`,
-  })
+  // Issue a new access token - Fixed expiration time
+  const newAccessToken = jwt.sign(
+    { userId: user.id}, 
+    process.env.JWT_SECRET, 
+    { expiresIn: process.env.TOKEN_EXPIRE_TIME || '15m' }
+  );
 
   res.json({ accessToken: newAccessToken });
 });
@@ -84,4 +96,3 @@ export const logoutHandler = asyncHandler(async (req, res) => {
   // Always send success response, even if no token was found
   res.sendStatus(204);
 });
-
