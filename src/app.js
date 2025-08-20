@@ -7,6 +7,8 @@ import initializePassport from '../lib/passport.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import authRoutes from '../routes/authRouter.js'
 import postRoutes from '../routes/postRoutes.js'
@@ -21,6 +23,20 @@ export const __dirname = path.dirname(__filename);
 const app = express();
 initializePassport();
 
+// ✅ Add Helmet for security headers
+app.use(helmet());
+
+// ✅ Rate limiting (important for login brute-force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 login requests
+  standardHeaders: true, 
+  legacyHeaders: false,
+  message: "Too many login attempts, try again later."
+});
+
+// Apply only to auth routes
+app.use('/api/auth', authLimiter);
 // Define allowed origins
 const allowedOrigins = [
   'https://doggo-blog.vercel.app',
@@ -46,8 +62,8 @@ app.use((req, res, next) => {
   
   // Set Access-Control-Allow-Origin based on request origin
   if (!origin) {
-    // For requests without origin (like Postman, curl, or same-origin)
-    res.header('Access-Control-Allow-Origin', '*');
+    // Explicitly allow only localhost for tools like curl/Postman
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
   } else if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   } else {
