@@ -11,12 +11,12 @@ https://doggo-blog.vercel.app/
 
 ### Desktop
 
-<img src="/assets/screenshot1.png" alt="screenshot"/>
-<img src="/assets/screenshot2.png" alt="screenshot"/>
+<img src="/public/assets/screenshot1.png" alt="screenshot"/>
+<img src="/public/assets/screenshot2.png" alt="screenshot"/>
 
 ### Mobile
 
-<img src="/assets/screenshot3.png" alt="screenshot"/>
+<img src="/public/assets/screenshot3.png" alt="screenshot"/>
 
 ## Technologies used
 
